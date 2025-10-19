@@ -1,0 +1,10 @@
+CREATE KEYSPACE salud_db WITH replication = {'class': 'SimpleStrategy', 'replication_factor': 1};
+
+USE salud_db; 
+
+CREATE TABLE actividad_diaria (id bigint, fecha date, pasos_total int, distancia_total float, minutos_sedentarismo int, calorias int, PRIMARY KEY(id, fecha));
+CREATE TABLE sueno_diario (id bigint, fecha date, total_minutos_sueno int, total_minutos_cama int, total_registros_sueno int, PRIMARY KEY (id, fecha));
+CREATE TABLE peso_eventual (id bigint, fecha date, peso_kg float, imc float, PRIMARY KEY(id, fecha));
+CREATE TABLE ritmo_cardiaco (id bigint, fecha_hms timestamp, ppm int, PRIMARY KEY (id, fecha_hms));
+
+DESCRIBE TABLES
