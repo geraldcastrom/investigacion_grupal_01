@@ -1,0 +1,6 @@
+-- Consulta 6: ¿Qué distancia total recorre una persona en una semana?
+SELECT fecha, distancia_total
+FROM actividad_diaria
+WHERE id = 1503960366
+  AND fecha >= '2016-04-11'
+  AND fecha <= '2016-04-17';
