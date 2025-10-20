@@ -8,3 +8,8 @@ CREATE TABLE peso_eventual (id bigint, fecha date, peso_kg float, imc float, PRI
 CREATE TABLE ritmo_cardiaco (id bigint, fecha_hms timestamp, ppm int, PRIMARY KEY (id, fecha_hms));
 
 DESCRIBE TABLES
+
+COPY actividad_diaria (id, pasos_total, distancia_total, minutos_sedentarismo, calorias, fecha) FROM 'C:/Cassandra/datos_salud/actividad_diaria.csv' WITH DELIMITER=',' AND HEADER = TRUE;
+COPY sueno_diario (id, total_registros_sueno, total_minutos_sueno, total_minutos_cama, fecha) FROM 'C:/Cassandra/datos_salud/sueno_diario.csv' WITH DELIMITER=',' AND HEADER = TRUE;
+COPY peso_eventual(id, fecha, peso_kg, imc) FROM 'C:/Cassandra/datos_salud/peso_eventual.csv' WITH DELIMITER=',' AND HEADER = TRUE;
+COPY ritmo_cardiaco (id, fecha_hms, ppm) FROM 'C:/Cassandra/datos_salud/rc_segundos.csv' WITH DELIMITER=',' AND HEADER = TRUE;
