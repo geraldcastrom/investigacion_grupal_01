@@ -16,11 +16,11 @@ rc_segundos <- read.csv("heartrate_seconds_merged.csv")
 ```
 
 ```{r}
-#mantener un mismo formato de fecha
+#Cambiar el formato de la fecha para adaptarlos a la forma internacional que usan productos como Cassandra y ScyllaDB
 actividad_diaria$Date <-format(as.Date(actividad_diaria$ActivityDate, format = "%m/%d/%Y"), "%Y-%m-%d")
 sueno_diario$Date <- format(as.Date(sueno_diario$SleepDay, format = "%m/%d/%Y"), "%Y-%m-%d")
 peso_eventual$Date <- format(as.Date(peso_eventual$Date, format = "%m/%d/%Y"), "%Y-%m-%d")
-rc_segundos$Time <- format(as.POSIXct(rc_segundos$Time, format = "%m/%d/%Y %I:%M:%S %p"),"%Y/%m/%d %H:%M:%S")
+rc_segundos$Time <- format(as.POSIXct(rc_segundos$Time, format = "%m/%d/%Y %I:%M:%S %p"),"%Y-%m-%d %H:%M:%S")
 ```
 
 ```{r}
