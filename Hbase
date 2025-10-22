@@ -1,0 +1,134 @@
+import happybase
+import csv
+import os
+
+HBASE_IP = '172.29.76.153'
+connection = happybase.Connection(HBASE_IP)
+connection.open()
+
+FILE_PATHS = {
+    'actividad_diaria': 'actividad_diaria.csv',
+    'peso_eventual': 'peso_eventual.csv', 
+    'rc_segundos': 'rc_segundos.csv',
+    'sueno_diario': 'sueno_diario.csv'
+}
+
+print("BUSCANDO ARCHIVOS EN DIRECTORIO ACTUAL...")
+for nombre, archivo in FILE_PATHS.items():
+    if os.path.exists(archivo):
+        print(f"{nombre}: {archivo} - ENCONTRADO")
+    else:
+        print(f"{nombre}: {archivo} - NO ENCONTRADO")
+        with open(archivo, 'w') as f:
+            f.write("Id,Date,TotalSteps,TotalDistance,SedentaryMinutes,Calories\n")
+        print(f"{archivo} creado (vacio)")
+
+tables_config = {
+    'actividad_diaria': {'info': {}, 'metrics': {}},
+    'peso_eventual': {'info': {}, 'metrics': {}},
+    'rc_segundos': {'info': {}, 'metrics': {}},
+    'sueno_diario': {'info': {}, 'metrics': {}}
+}
+
+existing_tables = [table.decode() for table in connection.tables()]
+for table_name, families in tables_config.items():
+    if table_name not in existing_tables:
+        connection.create_table(table_name, families)
+
+print("CARGANDO DATOS...")
+for table_name, file_path in FILE_PATHS.items():
+    table = connection.table(table_name)
+    try:
+        with open(file_path, 'r') as f:
+            reader = csv.reader(f)
+            next(reader)
+            with table.batch(batch_size=100) as b:
+                for row in reader:
+                    if not row: continue
+                    
+                    if table_name == 'actividad_diaria' and len(row) >= 6:
+                        row_key = f"{row[0]}_{row[1].replace('/', '')}"
+                        b.put(row_key.encode(), {
+                            b'info:Date': row[1].encode(),
+                            b'metrics:TotalSteps': row[2].encode(),
+                            b'metrics:TotalDistance': row[3].encode(),
+                            b'metrics:SedentaryMinutes': row[4].encode(),
+                            b'metrics:Calories': row[5].encode()
+                        })
+                    elif table_name == 'peso_eventual' and len(row) >= 4:
+                        row_key = f"{row[0]}_{row[1].replace('/', '')}"
+                        b.put(row_key.encode(), {
+                            b'info:Date': row[1].encode(),
+                            b'metrics:WeightKg': row[2].encode(),
+                            b'metrics:BMI': row[3].encode()
+                        })
+                    elif table_name == 'rc_segundos' and len(row) >= 3:
+                        row_key = f"{row[0]}_{row[1].replace(' ', '_').replace(':', '').replace('/', '')}"
+                        b.put(row_key.encode(), {
+                            b'info:Time': row[1].encode(),
+                            b'metrics:Value': row[2].encode()
+                        })
+                    elif table_name == 'sueno_diario' and len(row) >= 5:
+                        fecha = row[1].split()[0]
+                        row_key = f"{row[0]}_{fecha.replace('/', '')}"
+                        b.put(row_key.encode(), {
+                            b'info:SleepDay': row[1].encode(),
+                            b'metrics:TotalSleepRecords': row[2].encode(),
+                            b'metrics:TotalMinutesAsleep': row[3].encode(),
+                            b'metrics:TotalTimeInBed': row[4].encode()
+                        })
+        print(f"{table_name} cargado")
+    except Exception as e:
+        print(f"{table_name}: {e}")
+
+def consulta(num, preg, tabla, prefijo, campos, formato):
+    print(f"\n{'='*60}")
+    print(f"CONSULTA {num}: {preg}")
+    print(f"{'='*60}")
+    
+    table = connection.table(tabla)
+    count = 0
+    
+    for key, data in table.scan(row_prefix=prefijo):
+        if count >= 5: break
+        valores = [data.get(campo, b'').decode() for campo in campos]
+        print(formato.format(*valores))
+        count += 1
+    
+    if count == 0:
+        print("No hay datos")
+
+print("EJECUTANDO 10 CONSULTAS")
+
+consulta(1, "Pasos diarios en un mes", 'actividad_diaria', b'1503960366_201604', 
+         [b'info:Date', b'metrics:TotalSteps'], "Fecha: {} - Pasos: {}")
+
+consulta(2, "Ritmo cardíaco en 40 min", 'rc_segundos', b'1503960366_', 
+         [b'info:Time', b'metrics:Value'], "Hora: {} - Ritmo: {} lpm")
+
+consulta(3, "Minutos sedentarismo mensual", 'actividad_diaria', b'1503960366_201604', 
+         [b'info:Date', b'metrics:SedentaryMinutes'], "Fecha: {} - Minutos: {}")
+
+consulta(4, "Minutos de sueño semanal", 'sueno_diario', b'1503960366_', 
+         [b'info:SleepDay', b'metrics:TotalMinutesAsleep'], "Fecha: {} - Minutos sueño: {}")
+
+consulta(5, "Pasos y calorías mensuales", 'actividad_diaria', b'1503960366_201604', 
+         [b'info:Date', b'metrics:TotalSteps', b'metrics:Calories'], "Fecha: {} - Pasos: {} - Calorías: {}")
+
+consulta(6, "Distancia semanal", 'actividad_diaria', b'1503960366_', 
+         [b'info:Date', b'metrics:TotalDistance'], "Fecha: {} - Distancia: {} km")
+
+consulta(7, "Variación de peso semanal", 'peso_eventual', b'1503960366_', 
+         [b'info:Date', b'metrics:WeightKg'], "Fecha: {} - Peso: {} kg")
+
+consulta(8, "Variación de BMI mensual", 'peso_eventual', b'1503960366_', 
+         [b'info:Date', b'metrics:BMI'], "Fecha: {} - BMI: {}")
+
+consulta(9, "Ritmo cardíaco nocturno (7-8 PM)", 'rc_segundos', b'1503960366_', 
+         [b'info:Time', b'metrics:Value'], "Hora: {} - Ritmo: {} lpm")
+
+consulta(10, "Registros de sueño mensual", 'sueno_diario', b'1503960366_', 
+         [b'info:SleepDay', b'metrics:TotalSleepRecords'], "Fecha: {} - Registros: {}")
+
+print("10 CONSULTAS COMPLETADAS")
+connection.close()
